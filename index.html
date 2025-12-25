@@ -1,349 +1,347 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Stethoscope, 
-  AlertTriangle, 
-  Activity, 
-  Info, 
-  CheckCircle2, 
-  XCircle, 
-  ClipboardCheck,
-  FlaskConical,
-  Syringe,
-  ChevronRight,
-  ChevronLeft,
-  RefreshCcw,
-  Scale
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico e Tratamento de SHR</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
 
-const App = () => {
-  const [step, setStep] = useState(1);
-  const [data, setData] = useState({
-    cirrose: false,
-    ascite: false,
-    creatininaBasal: '',
-    creatininaActual: '',
-    shock: false,
-    nefrotoxicos: false,
-    proteinuria: false,
-    hematuria: false,
-    ecografiaNormal: true,
-    respostaAlumina: 'pendente', // 'pendente', 'sim', 'nao'
-    pesoPaciente: ''
-  });
+    <script type="text/babel">
+        // Helper corregido para usar ícones Lucide con validaciones de seguridad
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const [svg, setSvg] = React.useState("");
 
-  const reset = () => {
-    setStep(1);
-    setData({
-      cirrose: false,
-      ascite: false,
-      creatininaBasal: '',
-      creatininaActual: '',
-      shock: false,
-      nefrotoxicos: false,
-      proteinuria: false,
-      hematuria: false,
-      ecografiaNormal: true,
-      respostaAlumina: 'pendente',
-      pesoPaciente: ''
-    });
-  };
+            React.useEffect(() => {
+                const updateIcon = () => {
+                    if (window.lucide && window.lucide.icons) {
+                        const iconNode = window.lucide.icons[name];
+                        if (iconNode && Array.isArray(iconNode)) {
+                            const children = iconNode[2] || [];
+                            
+                            const svgString = `
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    width="${size}" 
+                                    height="${size}" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    stroke-width="2" 
+                                    stroke-linecap="round" 
+                                    stroke-linejoin="round"
+                                    class="${className}"
+                                >
+                                    ${children.map(child => {
+                                        const tag = child[0];
+                                        const attrs = child[1] || {};
+                                        const childAttrs = Object.entries(attrs)
+                                            .map(([k, v]) => `${k}="${v}"`)
+                                            .join(' ');
+                                        return `<${tag} ${childAttrs}></${tag}>`;
+                                    }).join('')}
+                                </svg>`;
+                            setSvg(svgString);
+                        }
+                    }
+                };
 
-  const isAKI = useMemo(() => {
-    const basal = parseFloat(data.creatininaBasal);
-    const actual = parseFloat(data.creatininaActual);
-    if (isNaN(basal) || isNaN(actual) || basal <= 0) return false;
-    
-    // Critério ICA-AKI: Incremento >= 0.3 mg/dL ou >= 50% da basal
-    return (actual - basal >= 0.3) || (actual >= basal * 1.5);
-  }, [data.creatininaBasal, data.creatininaActual]);
+                updateIcon();
+                // En caso de que cargue lento, reintentar una vez
+                const timer = setTimeout(updateIcon, 100);
+                return () => clearTimeout(timer);
+            }, [name, size, className]);
 
-  const diagnosticStatus = useMemo(() => {
-    if (!data.cirrose || !data.ascite) return "Inelegível (Requer cirrose e ascite)";
-    if (!isAKI) return "Aguardando critérios de AKI";
-    
-    const temExclusao = data.shock || data.nefrotoxicos || data.proteinuria || data.hematuria || !data.ecografiaNormal;
-    
-    if (temExclusao) return "Provável lesão renal estrutural ou pré-renal (Não SHR)";
-    if (data.respostaAlumina === 'nao') return "Diagnóstico compatível com SHR-AKI";
-    if (data.respostaAlumina === 'sim') return "AKI Pré-renal (Respondeu ao volume)";
-    
-    return "Avaliação em curso (Aguardando resposta à Albumina)";
-  }, [data, isAKI]);
+            return <span className="inline-flex items-center justify-center" dangerouslySetInnerHTML={{ __html: svg }} />;
+        };
 
-  const renderStep = () => {
-    switch(step) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <ClipboardCheck className="text-blue-600" /> Critérios Base
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button 
-                onClick={() => setData(prev => ({...prev, cirrose: !prev.cirrose}))}
-                className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${data.cirrose ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}
-              >
-                <span className="font-medium">Diagnóstico de Cirrose?</span>
-                {data.cirrose ? <CheckCircle2 className="text-blue-500" /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
-              </button>
-              <button 
-                onClick={() => setData(prev => ({...prev, ascite: !prev.ascite}))}
-                className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${data.ascite ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}
-              >
-                <span className="font-medium">Presença de Ascite?</span>
-                {data.ascite ? <CheckCircle2 className="text-blue-500" /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
-              </button>
-            </div>
-            
-            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
-              <h3 className="font-semibold text-slate-700">Função Renal</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-slate-500 mb-1">Cr. Basal (mg/dL)</label>
-                  <input 
-                    type="number" step="0.1"
-                    value={data.creatininaBasal}
-                    onChange={(e) => setData(prev => ({...prev, creatininaBasal: e.target.value}))}
-                    className="w-full p-2 border rounded-lg"
-                    placeholder="Ex: 1.0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-500 mb-1">Cr. Actual (mg/dL)</label>
-                  <input 
-                    type="number" step="0.1"
-                    value={data.creatininaActual}
-                    onChange={(e) => setData(prev => ({...prev, creatininaActual: e.target.value}))}
-                    className="w-full p-2 border rounded-lg"
-                    placeholder="Ex: 2.1"
-                  />
-                </div>
-              </div>
-              {isAKI && (
-                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                  <AlertTriangle size={18} />
-                  <span className="text-sm font-medium">Critério ICA-AKI preenchido</span>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <XCircle className="text-red-600" /> Critérios de Exclusão
-            </h2>
-            <p className="text-sm text-slate-500 italic">Assinale se o paciente apresentar:</p>
-            <div className="space-y-3">
-              {[
-                { key: 'shock', label: 'Choque (Séptico, Cardiogénico, etc.)' },
-                { key: 'nefrotoxicos', label: 'Uso de Nefrotóxicos (AINES, contraste)' },
-                { key: 'proteinuria', label: 'Proteinúria significativa (> 500mg/dia)' },
-                { key: 'hematuria', label: 'Hematúria (> 50 hemácias/campo)' },
-              ].map(item => (
-                <button 
-                  key={item.key}
-                  onClick={() => setData(prev => ({...prev, [item.key]: !prev[item.key]}))}
-                  className={`w-full p-3 rounded-lg border flex justify-between items-center transition-colors ${data[item.key] ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}
-                >
-                  <span className={data[item.key] ? 'font-semibold text-red-700' : 'text-slate-700'}>{item.label}</span>
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${data[item.key] ? 'bg-red-500 border-red-500' : 'border-slate-300'}`}>
-                    {data[item.key] && <div className="w-2 h-2 bg-white rounded-sm" />}
-                  </div>
-                </button>
-              ))}
-              <button 
-                onClick={() => setData(prev => ({...prev, ecografiaNormal: !prev.ecografiaNormal}))}
-                className={`w-full p-3 rounded-lg border flex justify-between items-center transition-colors ${!data.ecografiaNormal ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}
-              >
-                <span className={!data.ecografiaNormal ? 'font-semibold text-red-700' : 'text-slate-700'}>Alterações na ecografia renal</span>
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${!data.ecografiaNormal ? 'bg-red-500 border-red-500' : 'border-slate-300'}`}>
-                  {!data.ecografiaNormal && <div className="w-2 h-2 bg-white rounded-sm" />}
-                </div>
-              </button>
-            </div>
-          </div>
-        );
-      case 3:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <FlaskConical className="text-purple-600" /> Expansão de Volume
-            </h2>
-            
-            <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl text-sm text-purple-800 leading-relaxed">
-              <p className="font-bold mb-2">Protocolo de Desafio de Volume:</p>
-              <p>Albúmina humana 20%: <strong>1 g/kg de peso</strong> (máx. 100g/dia) por 2 dias e suspensão de diuréticos.</p>
-            </div>
+        const App = () => {
+            const [step, setStep] = React.useState(1);
+            const [data, setData] = React.useState({
+                cirrose: false,
+                ascite: false,
+                creatininaBasal: '',
+                creatininaActual: '',
+                shock: false,
+                nefrotoxicos: false,
+                proteinuria: false,
+                hematuria: false,
+                ecografiaNormal: true,
+                respostaAlumina: 'pendente',
+                pesoPaciente: ''
+            });
 
-            <div className="bg-slate-50 p-4 rounded-xl">
-              <label className="block text-sm text-slate-500 mb-2 flex items-center gap-2">
-                <Scale size={16} /> Peso do Paciente (kg)
-              </label>
-              <input 
-                type="number"
-                value={data.pesoPaciente}
-                onChange={(e) => setData(prev => ({...prev, pesoPaciente: e.target.value}))}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none"
-                placeholder="Ex: 70"
-              />
-              {data.pesoPaciente && (
-                <p className="mt-2 text-xs font-bold text-purple-600">
-                  Dose sugerida: {Math.min(parseFloat(data.pesoPaciente), 100).toFixed(0)}g de Albúmina/dia
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-4">
-              <h3 className="font-semibold text-slate-700">Resultado após 48h</h3>
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { id: 'pendente', label: 'Avaliação em curso' },
-                  { id: 'sim', label: 'Melhoria da Creatinina (Respondeu)' },
-                  { id: 'nao', label: 'Sem melhoria (Não respondeu)' },
-                ].map(opt => (
-                  <button 
-                    key={opt.id}
-                    onClick={() => setData(prev => ({...prev, respostaAlumina: opt.id}))}
-                    className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${data.respostaAlumina === opt.id ? 'border-purple-500 bg-purple-50' : 'border-slate-100 bg-white'}`}
-                  >
-                    <span className="font-medium text-slate-700">{opt.label}</span>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${data.respostaAlumina === opt.id ? 'border-purple-500 bg-purple-500' : 'border-slate-200'}`}>
-                      {data.respostaAlumina === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
+            const reset = () => {
+                setStep(1);
+                setData({
+                    cirrose: false,
+                    ascite: false,
+                    creatininaBasal: '',
+                    creatininaActual: '',
+                    shock: false,
+                    nefrotoxicos: false,
+                    proteinuria: false,
+                    hematuria: false,
+                    ecografiaNormal: true,
+                    respostaAlumina: 'pendente',
+                    pesoPaciente: ''
+                });
+            };
+
+            const isAKI = React.useMemo(() => {
+                const basal = parseFloat(data.creatininaBasal);
+                const actual = parseFloat(data.creatininaActual);
+                if (isNaN(basal) || isNaN(actual) || basal <= 0) return false;
+                return (actual - basal >= 0.3) || (actual >= basal * 1.5);
+            }, [data.creatininaBasal, data.creatininaActual]);
+
+            const diagnosticStatus = React.useMemo(() => {
+                if (!data.cirrose || !data.ascite) return "Inelegível (Requer cirrose e ascite)";
+                if (!isAKI) return "Aguardando critérios de AKI";
+                const temExclusao = data.shock || data.nefrotoxicos || data.proteinuria || data.hematuria || !data.ecografiaNormal;
+                if (temExclusao) return "Provável lesão renal estrutural ou pré-renal (Não SHR)";
+                if (data.respostaAlumina === 'nao') return "Diagnóstico compatível com SHR-AKI";
+                if (data.respostaAlumina === 'sim') return "AKI Pré-renal (Respondeu ao volume)";
+                return "Avaliação em curso (Aguardando resposta à Albumina)";
+            }, [data, isAKI]);
+
+            const renderStep = () => {
+                switch(step) {
+                    case 1:
+                        return (
+                            <div className="space-y-6">
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Icon name="ClipboardCheck" className="text-blue-600" /> Critérios Base
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button 
+                                        onClick={() => setData(prev => ({...prev, cirrose: !prev.cirrose}))}
+                                        className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${data.cirrose ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}
+                                    >
+                                        <span className="font-medium">Diagnóstico de Cirrose?</span>
+                                        {data.cirrose ? <Icon name="CheckCircle2" className="text-blue-500" /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
+                                    </button>
+                                    <button 
+                                        onClick={() => setData(prev => ({...prev, ascite: !prev.ascite}))}
+                                        className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${data.ascite ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}
+                                    >
+                                        <span className="font-medium">Presença de Ascite?</span>
+                                        {data.ascite ? <Icon name="CheckCircle2" className="text-blue-500" /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
+                                    </button>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+                                    <h3 className="font-semibold text-slate-700">Função Renal</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-slate-500 mb-1">Cr. Basal (mg/dL)</label>
+                                            <input type="number" step="0.1" value={data.creatininaBasal} onChange={(e) => setData(prev => ({...prev, creatininaBasal: e.target.value}))} className="w-full p-2 border rounded-lg" placeholder="Ex: 1.0" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-slate-500 mb-1">Cr. Atual (mg/dL)</label>
+                                            <input type="number" step="0.1" value={data.creatininaActual} onChange={(e) => setData(prev => ({...prev, creatininaActual: e.target.value}))} className="w-full p-2 border rounded-lg" placeholder="Ex: 2.1" />
+                                        </div>
+                                    </div>
+                                    {isAKI && (
+                                        <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                                            <Icon name="AlertTriangle" size={18} />
+                                            <span className="text-sm font-medium">Critério ICA-AKI preenchido</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    case 2:
+                        return (
+                            <div className="space-y-6">
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Icon name="XCircle" className="text-red-600" /> Critérios de Exclusão
+                                </h2>
+                                <p className="text-sm text-slate-500 italic">Assinale se o paciente apresentar:</p>
+                                <div className="space-y-3">
+                                    {[
+                                        { key: 'shock', label: 'Choque (Séptico, Cardiogénico, etc.)' },
+                                        { key: 'nefrotoxicos', label: 'Uso de Nefrotóxicos (AINES, contraste)' },
+                                        { key: 'proteinuria', label: 'Proteinúria significativa (> 500mg/dia)' },
+                                        { key: 'hematuria', label: 'Hematúria (> 50 hemácias/campo)' },
+                                    ].map(item => (
+                                        <button 
+                                            key={item.key}
+                                            onClick={() => setData(prev => ({...prev, [item.key]: !prev[item.key]}))}
+                                            className={`w-full p-3 rounded-lg border flex justify-between items-center transition-colors ${data[item.key] ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}
+                                        >
+                                            <span className={data[item.key] ? 'font-semibold text-red-700' : 'text-slate-700'}>{item.label}</span>
+                                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${data[item.key] ? 'bg-red-500 border-red-500' : 'border-slate-300'}`}>
+                                                {data[item.key] && <div className="w-2 h-2 bg-white rounded-sm" />}
+                                            </div>
+                                        </button>
+                                    ))}
+                                    <button 
+                                        onClick={() => setData(prev => ({...prev, ecografiaNormal: !prev.ecografiaNormal}))}
+                                        className={`w-full p-3 rounded-lg border flex justify-between items-center transition-colors ${!data.ecografiaNormal ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}
+                                    >
+                                        <span className={!data.ecografiaNormal ? 'font-semibold text-red-700' : 'text-slate-700'}>Alterações na ecografia renal</span>
+                                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${!data.ecografiaNormal ? 'bg-red-500 border-red-500' : 'border-slate-300'}`}>
+                                            {!data.ecografiaNormal && <div className="w-2 h-2 bg-white rounded-sm" />}
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    case 3:
+                        return (
+                            <div className="space-y-6">
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Icon name="FlaskConical" className="text-purple-600" /> Expansão de Volume
+                                </h2>
+                                <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl text-sm text-purple-800 leading-relaxed">
+                                    <p className="font-bold mb-2">Protocolo de Desafio de Volume:</p>
+                                    <p>Albúmina humana 20%: <strong>1 g/kg de peso</strong> (máx. 100g/dia) por 2 dias e suspensão de diuréticos.</p>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-xl">
+                                    <label className="block text-sm text-slate-500 mb-2 flex items-center gap-2">
+                                        <Icon name="Scale" size={16} /> Peso do Paciente (kg)
+                                    </label>
+                                    <input type="number" value={data.pesoPaciente} onChange={(e) => setData(prev => ({...prev, pesoPaciente: e.target.value}))} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" placeholder="Ex: 70" />
+                                    {data.pesoPaciente && (
+                                        <p className="mt-2 text-xs font-bold text-purple-600">
+                                            Dose sugerida: {Math.min(parseFloat(data.pesoPaciente), 100).toFixed(0)}g de Albúmina/dia
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-slate-700">Resultado após 48h</h3>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {[
+                                            { id: 'pendente', label: 'Avaliação em curso' },
+                                            { id: 'sim', label: 'Melhoria da Creatinina (Respondeu)' },
+                                            { id: 'nao', label: 'Sem melhoria (Não respondeu)' },
+                                        ].map(opt => (
+                                            <button 
+                                                key={opt.id}
+                                                onClick={() => setData(prev => ({...prev, respostaAlumina: opt.id}))}
+                                                className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${data.respostaAlumina === opt.id ? 'border-purple-500 bg-purple-50' : 'border-slate-100 bg-white'}`}
+                                            >
+                                                <span className="font-medium text-slate-700">{opt.label}</span>
+                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${data.respostaAlumina === opt.id ? 'border-purple-500 bg-purple-500' : 'border-slate-200'}`}>
+                                                    {data.respostaAlumina === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    case 4:
+                        const isSHR = data.respostaAlumina === 'nao' && isAKI && data.cirrose && data.ascite;
+                        return (
+                            <div className="space-y-6">
+                                <div className={`p-6 rounded-2xl border-2 ${isSHR ? 'border-green-500 bg-green-50' : 'border-blue-500 bg-blue-50'}`}>
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-3 rounded-full ${isSHR ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                                           {isSHR ? <Icon name="Stethoscope" size={32} /> : <Icon name="Info" size={32} />}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm uppercase tracking-wider font-bold text-slate-500">Estado Clínico</h3>
+                                            <p className="text-xl font-bold text-slate-800">{diagnosticStatus}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {isSHR && (
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                            <Icon name="Syringe" className="text-blue-600" /> Conduta Terapêutica
+                                        </h3>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                                                <p className="font-bold text-blue-700 mb-1 text-sm">Vasoconstritor (1ª Linha)</p>
+                                                <p className="text-sm text-slate-700"><strong>Terlipressina:</strong> 0.5 - 2 mg IV a cada 4 - 6 horas.</p>
+                                                <p className="text-xs text-slate-500 mt-2">* Monitorizar isquemia e saturação. Alternativa: Noradrenalina.</p>
+                                            </div>
+                                            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                                                <p className="font-bold text-blue-700 mb-1 text-sm">Expansão Volumétrica</p>
+                                                <p className="text-sm text-slate-700"><strong>Albúmina:</strong> 20 - 40 g/dia.</p>
+                                            </div>
+                                            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                                                <p className="font-bold text-amber-800 flex items-center gap-2 text-sm">
+                                                    <Icon name="AlertTriangle" size={16} /> Alerta
+                                                </p>
+                                                <p className="text-xs text-amber-800">O tratamento definitivo é o <strong>Transplante de Fígado</strong>. Encaminhar para avaliação de transplante imediatamente.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <button onClick={reset} className="w-full py-4 border-2 border-slate-200 rounded-xl font-bold text-slate-500 flex items-center justify-center gap-2 hover:bg-slate-100 transition-all mt-4">
+                                    <Icon name="RefreshCcw" size={18} /> Nova Simulação
+                                </button>
+                            </div>
+                        );
+                    default: return null;
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-6">
+                    <div className="max-w-xl mx-auto bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
+                        <div className="bg-blue-700 p-6 text-white">
+                            <div className="flex justify-between items-center mb-1">
+                                <Icon name="Activity" className="opacity-70" size={20} />
+                                <span className="text-[10px] bg-blue-600 px-2 py-1 rounded-full uppercase font-bold tracking-widest">Protocolo Médico</span>
+                            </div>
+                            <h1 className="text-xl font-extrabold tracking-tight">Síndrome Hepatorrenal</h1>
+                            <p className="text-blue-100 text-xs opacity-80 mt-1">Algoritmo de Diagnóstico e Manejo (ICA 2024)</p>
+                        </div>
+                        <div className="flex bg-slate-50 border-b border-slate-100 p-1">
+                            {[1, 2, 3, 4].map(s => (
+                                <div key={s} className={`flex-1 py-3 text-center text-[10px] font-bold rounded-lg transition-all ${step === s ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-400'}`}>
+                                    {s === 4 ? 'RESULTADO' : `PASSO ${s}`}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="p-6 md:p-8 min-h-[420px]">
+                            {renderStep()}
+                        </div>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between gap-4">
+                            {step > 1 ? (
+                                <button onClick={() => setStep(step - 1)} className="px-5 py-3 rounded-xl font-bold text-slate-500 flex items-center gap-2 hover:bg-slate-200 transition-colors">
+                                    <Icon name="ChevronLeft" size={18} /> Voltar
+                                </button>
+                            ) : <div />}
+                            {step < 4 && (
+                                <button 
+                                    onClick={() => setStep(step + 1)} 
+                                    disabled={(step === 1 && (!data.cirrose || !data.ascite || !isAKI))}
+                                    className="px-8 py-3 bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-blue-800 transition-all shadow-md disabled:opacity-30 disabled:grayscale"
+                                >
+                                    Avançar <Icon name="ChevronRight" size={18} />
+                                </button>
+                            )}
+                        </div>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      case 4:
-        const isSHR = data.respostaAlumina === 'nao' && isAKI && data.cirrose && data.ascite;
-        return (
-          <div className="space-y-6">
-            <div className={`p-6 rounded-2xl border-2 ${isSHR ? 'border-green-500 bg-green-50' : 'border-blue-500 bg-blue-50'}`}>
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-full ${isSHR ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                   {isSHR ? <Stethoscope size={32} /> : <Info size={32} />}
+                    <div className="max-w-xl mx-auto mt-6 px-4 mb-8">
+                        <p className="text-[9px] text-slate-400 text-center uppercase tracking-widest leading-normal">
+                            Aviso: Ferramenta para fins educativos. O diagnóstico final e tratamento devem ser realizados por um médico especialista com base na avaliação clínica individualizada do paciente.
+                        </p>
+                    </div>
                 </div>
-                <div>
-                  <h3 className="text-sm uppercase tracking-wider font-bold text-slate-500">Estado Clínico</h3>
-                  <p className="text-xl font-bold text-slate-800">{diagnosticStatus}</p>
-                </div>
-              </div>
-            </div>
+            );
+        };
 
-            {isSHR && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <Syringe className="text-blue-600" /> Conduta Terapêutica
-                </h3>
-                
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                    <p className="font-bold text-blue-700 mb-1 text-sm">Vasoconstritor (1ª Linha)</p>
-                    <p className="text-sm text-slate-700">
-                      <strong>Terlipressina:</strong> 0.5 - 2 mg IV a cada 4 - 6 horas.
-                    </p>
-                    <p className="text-xs text-slate-500 mt-2">
-                      * Monitorizar isquemia e saturação. Alternativa: Noradrenalina.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                    <p className="font-bold text-blue-700 mb-1 text-sm">Expansão Volumétrica</p>
-                    <p className="text-sm text-slate-700">
-                      <strong>Albúmina:</strong> 20 - 40 g/dia.
-                    </p>
-                  </div>
-
-                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl">
-                    <p className="font-bold text-amber-800 flex items-center gap-2 text-sm">
-                      <AlertTriangle size={16} /> Alerta
-                    </p>
-                    <p className="text-xs text-amber-800">
-                      O tratamento definitivo é o <strong>Transplante de Fígado</strong>. Encaminhar para avaliação de transplante imediatamente.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button 
-              onClick={reset}
-              className="w-full py-4 border-2 border-slate-200 rounded-xl font-bold text-slate-500 flex items-center justify-center gap-2 hover:bg-slate-100 transition-all mt-4"
-            >
-              <RefreshCcw size={18} /> Nova Simulação
-            </button>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-6">
-      <div className="max-w-xl mx-auto bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-        {/* Top Header */}
-        <div className="bg-blue-700 p-6 text-white">
-          <div className="flex justify-between items-center mb-1">
-            <Activity className="opacity-70" size={20} />
-            <span className="text-[10px] bg-blue-600 px-2 py-1 rounded-full uppercase font-bold tracking-widest">Protocolo Médico</span>
-          </div>
-          <h1 className="text-xl font-extrabold tracking-tight">Síndrome Hepatorrenal</h1>
-          <p className="text-blue-100 text-xs opacity-80 mt-1">Algoritmo de Diagnóstico e Manejo (ICA 2024)</p>
-        </div>
-
-        {/* Progress Tracker */}
-        <div className="flex bg-slate-50 border-b border-slate-100 p-1">
-          {[1, 2, 3, 4].map(s => (
-            <div 
-              key={s}
-              className={`flex-1 py-3 text-center text-[10px] font-bold rounded-lg transition-all ${step === s ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-400'}`}
-            >
-              {s === 4 ? 'RESULTADO' : `PASO ${s}`}
-            </div>
-          ))}
-        </div>
-
-        {/* Dynamic Content */}
-        <div className="p-6 md:p-8 min-h-[420px]">
-          {renderStep()}
-        </div>
-
-        {/* Navigation Actions */}
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between gap-4">
-          {step > 1 ? (
-            <button 
-              onClick={() => setStep(step - 1)}
-              className="px-5 py-3 rounded-xl font-bold text-slate-500 flex items-center gap-2 hover:bg-slate-200 transition-colors"
-            >
-              <ChevronLeft size={18} /> Voltar
-            </button>
-          ) : <div />}
-          
-          {step < 4 && (
-            <button 
-              onClick={() => setStep(step + 1)}
-              disabled={(step === 1 && (!data.cirrose || !data.ascite || !isAKI))}
-              className="px-8 py-3 bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-blue-800 transition-all shadow-md disabled:opacity-30 disabled:grayscale"
-            >
-              Avançar <ChevronRight size={18} />
-            </button>
-          )}
-        </div>
-      </div>
-      
-      {/* Footer Info */}
-      <div className="max-w-xl mx-auto mt-6 px-4 mb-8">
-        <p className="text-[9px] text-slate-400 text-center uppercase tracking-widest leading-normal">
-          Aviso: Ferramenta para fins educativos. O diagnóstico final e tratamento devem ser realizados por um médico especialista com base na avaliação clínica individualizada do paciente.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
